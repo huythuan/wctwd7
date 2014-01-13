@@ -1,0 +1,58 @@
+<?php
+
+
+/**
+ * Implementation of hook_cron().
+ */
+function marketplace_expiration_cron() {
+  $clear_cache = FALSE;
+  $clear_cache = change_region_update();
+
+  if ($clear_cache) {
+    // Clear the cache so an anonymous poster can see any changes to nodes
+    drupal_flush_all_caches();
+  }
+}
+function change_region_update(){
+	
+}
+
+function change_region_init(){
+	$query = db_select('location', 'l');
+    $query->join('location_instance', 'i', 'i.lid = l.lid'); 
+	$query->groupBy('i.nid');//GROUP BY user ID
+	//Select fields
+	$query->condition('l.city',array('Gilroy', 'San Juan Bautista', 'Hollister','Tres Pinos','Paisines','Moss Landing','Castroville','Salinas','Gonzales','Soledad','Greenfield','King City','Monterey','Pacific Grove','Carmel','Carmel Valley','Big Sur'),'IN');
+    $query->fields("i", array("nid"));
+    $results = $query->execute();
+	 if (count($results) > 0) {
+		$i=0;
+		foreach ($results as $value) {
+			//print('<pre>');
+		//	print_r($value->nid);
+			//print('</pre>');
+			$record = array(		
+			'entity_id' => $value->nid,		
+			'taxonomy_vocabulary_4_tid' => '291'
+			);		
+			drupal_write_record('field_data_taxonomy_vocabulary_4', $record,'entity_id');
+			drupal_write_record('field_revision_taxonomy_vocabulary_4', $record,'entity_id');
+			//updating taxonomy_index
+			$record_tax = array(		
+			'nid' => $value->nid,		
+			'tid' => '291',
+			'sticky' =>'0',
+			'created' => time()
+			);
+			drupal_write_record('taxonomy_index',$record_tax);
+			//updating type
+		//	drupal_write_record('field_data_field_flip_book_type', $record);
+		//	drupal_write_record('field_revision_field_flip_book_type', $record);			
+	
+		}
+		echo 'sum'.$i;
+			echo time();
+	}
+		
+}
+

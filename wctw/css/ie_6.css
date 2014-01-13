@@ -1,0 +1,24 @@
+.what_hot {
+	display:none;
+}
+#photos_rotate{
+	display:none;
+}
+body{
+	position:relative;
+}
+#page-wrap {
+margin: 0 auto;
+width: 1100px;
+background-color: white;
+overflow: hidden !important;
+}
+#main_content #sidebar_left{
+	width:700px;
+}
+#sidebar_right {
+width: 300px;
+}
+.views-row {
+	width:680px !important;
+}

@@ -1,0 +1,31 @@
+name = wctw
+description = A theme only for wctw.
+screenshot = screenshot.png
+core = 7.x
+stylesheets[all][] = css/style.css
+stylesheets[all][] = css/mobile.css
+stylesheets[print][] = css/print.css
+scripts[] = js/region_nav.js
+scripts[] = js/toggle.js
+scripts[] = js/preview_image.js
+scripts[] = js/selectivizr.js
+
+regions[follow] = Follow
+regions[search_box] = Top_Search
+regions[search_filter] = Search Filter
+regions[event_calendar] = Event Calendar
+regions[slider] = Image Slider
+regions[content] = Content
+regions[sidebar_middle] = Sidebar middle
+regions[sidebar_right_top] = Right Sidebar Top
+regions[sidebar_right_bottom] = Right Sidebar Bottom
+regions[second_sidebar_right_bottom] = Second Right Sidebar Bottom 
+regions[footer] = Footer
+
+version = "7.x-1.x"
+core = "7.x"
+project = "wctw"
+
+
+
+

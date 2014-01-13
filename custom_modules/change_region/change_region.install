@@ -1,0 +1,115 @@
+<?php
+/**
+ * @file
+ * Install, update, and uninstall functions for the change_region module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function change_region_install() {
+  $t = get_t();
+  drupal_set_message(
+    $t(
+      'Change Region module succesfully installed.'
+    )
+  );
+}
+
+/**
+ * @file change_region.install
+ *
+ * Install, update and uninstall functions for the change_region module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function change_region_schema() {
+  $schema['change_region_rule'] = array(
+    'description' => t('Table storing marketplace parser rule definitions.'),
+    'export' => array(
+      'key' => 'name',
+      'primary key' => 'id',
+      'identifier' => 'rule', // Exports will be defined as $rule
+      'default hook' => 'change_region_rule',
+      'save callback' => 'change_region_rule_save',
+      'delete callback' => 'change_region_rule_delete',
+      'api' => array(
+        'owner' => 'change_region',
+        'api' => 'change_region_rules',  // Base name for api include files.
+        'minimum_version' => 1,
+        'current_version' => 1,
+      ),
+    ),
+    'fields' => array(
+	'id' => array(
+	     'type' => 'serial',
+	      'unsigned' => TRUE,
+	      'not null' => TRUE,
+	      'description' => 'The primary identifier for the JS injection rule',
+	      'no export' => TRUE, // do not export database-only keys.
+	   ),
+      'title' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'description' => 'Unique ID for rules. Used to identify them programmatically.',
+      ),
+      
+      'description' => array(
+        'type' => 'text',
+		'size' => 'big',
+        'description' => 'Description of business.',
+      ),
+	  'business_id' => array(
+        'description' => 'Business Id from marketplace.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'phone' => array(
+        'type' => 'text',
+        'size' => 'small',
+        'description' => 'The actual JavaScript code.',
+      ),
+      'link' => array(
+        'type' => 'text',
+         'size' => 'small',
+        'description' => 'Link of a business from norcalmarketplace',
+      ),      
+    ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+}
+
+/**
+ * Adding visibility field.
+ */
+function change_region_update_7000() {
+  // Add the visibility field to the db.
+  if (!db_field_exists('change_region_rule', 'visibility')) {
+    db_add_field('change_region_rule', 'visibility',
+      array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 1,
+        'size' => 'tiny',
+      )
+    );
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * This is required to cleanup the left over files
+ */
+function change_region_uninstall() {
+  ctools_include('export');
+  $rules = ctools_export_load_object('change_region_rule');
+  foreach ($rules as $name => $rule) {
+    file_unmanaged_delete(_change_region_rule_path($rule->id));
+  }
+}
+

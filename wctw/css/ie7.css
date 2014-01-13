@@ -1,0 +1,24 @@
+.views-row{
+	position: relative;
+	width: 96%;
+	height: auto;
+}
+.ds-2col-fluid.node.node-maps.node-teaser.view-mode-teaser.clearfix{
+	width:100%;
+	position:relative;
+	padding: 0 !important;
+	background-color:#e3e3e3 !important;
+}
+#sidebar_left .form-submit {
+padding: 1px 20px !important;
+}
+.region_filters{
+	padding-right:1px;
+}
+.views-exposed-form .views-exposed-widget .form-submit {
+margin-top: 2em;
+}
+.view-directory .views-row {
+	position:relative;
+	width:100%;
+}
