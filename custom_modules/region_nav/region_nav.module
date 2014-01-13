@@ -1,0 +1,211 @@
+<?php
+
+/**
+ * Created by Thuan Nguyen.
+ * User: thuannguyen
+ * Date: Sep 09, 2013
+ * Time: 4:36pm
+ */
+
+/**
+ * Implementation of hook_cron().
+ */
+function region_nav_cron() {
+	region_nav_update();
+}
+/**
+ * Updating number of nodes of each type.
+ */
+function region_nav_update(){
+	$regions = region_nav_get_region();
+	foreach ($regions as $region){
+		$record = array();
+		$record['region_id'] = $region->tid;			
+		$record['region'] = $region->name;
+		$record['number_node_wineries']= region_nav_count($region->tid,'29');
+		$record['number_node_dining']= region_nav_count($region->tid,'27');
+		$record['number_node_region']= region_nav_count_region($region->tid);
+		$record['number_node_deals']= region_nav_count_deals($region->tid);
+		if(region_nav_check($region->tid)){
+			drupal_write_record('region_nav_rule', $record,'region_id');
+		}else{
+			drupal_write_record('region_nav_rule', $record);
+		}
+		
+	}
+	
+}
+/**
+ * Get array of regions.
+ */
+function region_nav_get_region(){
+	$query = db_select('taxonomy_term_data','t');
+	$query->condition('t.vid','4','=');
+	$query->fields("t", array("name","tid"));
+	$query->groupBy('t.name');
+	$results = $query->execute();
+	return $results;
+}
+
+/**
+ * return number of dining businesses.
+ */
+function region_nav_count($region_id,$business_type){
+	$query = db_select('field_data_taxonomy_vocabulary_4', 't4');
+	$query->condition('t4.taxonomy_vocabulary_4_tid',$region_id,'=');
+	$query->join('node', 'n', 'n.nid = t4.entity_id');
+	$query->condition('n.status','1');
+	$query->join('field_data_taxonomy_vocabulary_5', 't5', 't4.entity_id = t5.entity_id');
+	$query->condition('t5.taxonomy_vocabulary_5_tid',$business_type,'=');
+	$query->groupBy('t4.entity_id');
+	$query->fields("t4", array("entity_id"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		$i = 0;
+		foreach ($results as $value) {	
+			$i++;
+			}
+		}
+		return $i;
+	
+}
+/**
+ * return number of dining businesses.
+ */
+function region_nav_count_region($region_id){
+	$query = db_select('field_data_taxonomy_vocabulary_4', 't4');
+	$query->condition('t4.taxonomy_vocabulary_4_tid',$region_id,'=');
+	$query->join('node', 'n', 'n.nid = t4.entity_id');
+	$query->condition('n.status','1');
+	$query->groupBy('t4.entity_id');
+	$query->fields("t4", array("entity_id"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		$i = 0;
+		foreach ($results as $value) {	
+			$i++;
+			}
+		}
+		return $i;
+	
+}
+
+/**
+ * return number of dining businesses.
+ */
+function region_nav_count_deals($region_id){
+	$query = db_select('content_type_coupon', 'c');
+	$query->join('node', 'n', 'n.nid = c.nid');
+	$query->condition('n.status','1');
+	$query->join('field_data_taxonomy_vocabulary_4', 't4', 't4.entity_id = c.field_coupon_business_ref_nid');
+	$query->condition('t4.taxonomy_vocabulary_4_tid',$region_id,'=');
+	$query->groupBy('c.nid');
+	$query->fields("c", array("nid"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		$i = 0;
+		foreach ($results as $value) {	
+			$i++;
+			}
+		}
+		return $i;
+}
+
+
+/**
+ * Check to see if there is a record.
+ */
+function region_nav_check($record_id){
+	$query = db_select('region_nav_rule', 'r');
+	$query->condition('r.region_id',$record_id,'=');
+	$query->groupBy('r.region_id');
+	$query->fields("r", array("region_id"));
+	$results = $query->execute();
+	$results = $results->fetchAll();
+	if (count($results) > 0) {
+			return TRUE;
+		}
+	else{
+			return FALSE;
+		}
+}
+/*
+* Implement hook_init
+*/
+function region_nav_init(){		
+	$url = explode("/",$_GET['q']);
+	$secondLevelLocation = $url[0];
+	if ($secondLevelLocation == 'deals' || $secondLevelLocation == 'wineries' || $secondLevelLocation == 'regions' || $secondLevelLocation == 'dining'|| $secondLevelLocation == 'maps') {
+	global $link_list_regions;
+	$link_list_regions = "<div id='region_filters'>";
+	$link_list_regions .= "<ul id='region_list'>";
+	$current_region = $_GET ['region'];
+	if (($current_region =='')&& ($_GET ['field_map_region_tid']=='')){
+		$link_list_regions .="<li class ='active_region'><a href='/".$secondLevelLocation."'> "."All Regions"."</a></li>";	
+	}else{
+		$link_list_regions .="<li class ='region_nav'><a href='/".$secondLevelLocation."'> "."All Regions"."</a></li>";	
+	}	
+	//get list of links
+	$query = db_select('region_nav_rule', 'r');
+	$query->groupBy('r.region_id');
+	$query->fields("r");
+	$results = $query->execute();
+	foreach ($results as $result){
+		switch ($secondLevelLocation) {
+		    case 'deals':
+		        if ( !empty($query) && ($current_region == $result->region_id)) {
+					$link_list_regions .="<li class ='active_region'><a href='/".$secondLevelLocation."?region=".$result->region_id."'> ".$result->region."(".$result->number_node_deals.")"."</a></li>";
+				}else{
+					$link_list_regions .="<li class ='region_nav'><a href='/".$secondLevelLocation."?region=".$result->region_id."'> ".$result->region."(".$result->number_node_deals.")"."</a></li>";
+				}
+		        break;
+		    case 'wineries':
+		        if ( !empty($query) && ($current_region == $result->region_id)) {
+					$link_list_regions .="<li class ='active_region'><a href='/".$secondLevelLocation."?region=".$result->region_id."'> ".$result->region."(".$result->number_node_wineries.")"."</a></li>";
+				}else{
+					$link_list_regions .="<li class ='region_nav'><a href='/".$secondLevelLocation."?region=".$result->region_id."'> ".$result->region."(".$result->number_node_wineries.")"."</a></li>";
+				}
+		        break;
+		    case 'regions':
+		         if ( !empty($query) && ($current_region == $result->region_id)) {
+						$link_list_regions .="<li class ='active_region'><a href='/".$secondLevelLocation."?region=".$result->region_id."'> ".$result->region."(".$result->number_node_region.")"."</a></li>";
+					}else{
+						$link_list_regions .="<li class ='region_nav'><a href='/".$secondLevelLocation."?region=".$result->region_id."'> ".$result->region."(".$result->number_node_region.")"."</a></li>";
+					}
+		        break;
+				case 'dining':
+			         if ( !empty($query) && ($current_region == $result->region_id)) {
+							$link_list_regions .="<li class ='active_region'><a href='/".$secondLevelLocation."?region=".$result->region_id."'> ".$result->region."(".$result->number_node_dining.")"."</a></li>";
+						}else{
+							$link_list_regions .="<li class ='region_nav'><a href='/".$secondLevelLocation."?region=".$result->region_id."'> ".$result->region."(".$result->number_node_dining.")"."</a></li>";
+						}
+			        break;
+				case 'maps':
+				       if ( !empty($query) && ($_GET ['field_map_region_tid'] == $result->region_id)) {
+								$link_list_regions .="<li class ='active_region'><a href='/".$secondLevelLocation."?field_map_region_tid=".$result->region_id."'> ".$result->region."</a></li>";
+						}else{
+								$link_list_regions .="<li class ='region_nav'><a href='/".$secondLevelLocation."?field_map_region_tid=".$result->region_id."'> ".$result->region."</a></li>";
+						}
+				     break;
+			default:
+				 $link_list_regions ='';
+			break;
+		}	
+	}
+	$link_list_regions .= "</ul>";
+	$link_list_regions .= "</div>";
+	return $link_list_regions;
+  }
+}
+
+/*
+* Implement hook_preprocess_page
+*/
+function region_nav_preprocess_page(&$vars) {
+	global $link_list_regions;
+	$url = explode("/",$_GET['q']);
+	$secondLevelLocation = $url[0];
+	if ($secondLevelLocation == 'deals' || $secondLevelLocation == 'wineries' || $secondLevelLocation == 'regions' || $secondLevelLocation == 'dining' || $secondLevelLocation == 'maps') {
+	   $vars['region_nav'] = "<h2 id='filter_slider'><span class='show'></span> </h2>".$link_list_regions;
+  }
+}

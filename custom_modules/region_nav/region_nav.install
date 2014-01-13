@@ -1,0 +1,116 @@
+<?php
+/**
+ * @file
+ * Install, update, and uninstall functions for the region_nav module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function region_nav_install() {
+  $t = get_t();
+  drupal_set_message(
+    $t(
+      'Marketplace parser module succesfully installed.'
+    )
+  );
+}
+
+/**
+ * @file region_nav.install
+ *
+ * Install, update and uninstall functions for the region_nav module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function region_nav_schema() {
+  $schema['region_nav_rule'] = array(
+    'description' => t('Table storing marketplace parser rule definitions.'),
+    'export' => array(
+      'key' => 'name',
+      'primary key' => 'region_id',
+      'identifier' => 'rule', // Exports will be defined as $rule
+      'default hook' => 'region_nav_rule',
+      'save callback' => 'region_nav_rule_save',
+      'delete callback' => 'region_nav_rule_delete',
+      'api' => array(
+        'owner' => 'region_nav',
+        'api' => 'region_nav_rules',  // Base name for api include files.
+        'minimum_version' => 1,
+        'current_version' => 1,
+      ),
+    ),
+    'fields' => array(
+	'region_id' => array(
+	     'type' => 'int',
+	      'unsigned' => TRUE,
+	      'not null' => TRUE,
+	      'description' => 'The id for region',
+	   ),
+      'region' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'description' => 'The name of region',
+      ),
+	'number_node_wineries' => array(
+        'description' => 'Number of nodes for wineries page.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ), 
+	'number_node_dining' => array(
+        'description' => 'Number of nodes for dining page.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+	'number_node_region' => array(
+        'description' => 'Number of nodes for region page.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),     
+	  'number_node_deals' => array(
+        'description' => 'Number of nodes for deal page.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+          
+    ),
+    'primary key' => array('region_id'),
+  );
+  return $schema;
+}
+
+/**
+ * Adding visibility field.
+ */
+function region_nav_update_7000() {
+  // Add the visibility field to the db.
+  if (!db_field_exists('region_nav_rule', 'visibility')) {
+    db_add_field('region_nav_rule', 'visibility',
+      array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 1,
+        'size' => 'tiny',
+      )
+    );
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * This is required to cleanup the left over files
+ */
+function region_nav_uninstall() {
+  ctools_include('export');
+  $rules = ctools_export_load_object('region_nav_rule');
+  foreach ($rules as $name => $rule) {
+    file_unmanaged_delete(_region_nav_rule_path($rule->id));
+  }
+}

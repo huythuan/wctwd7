@@ -1,0 +1,5 @@
+name = Region Nav
+description = Help filter regions
+core = 7.x
+package = Custom
+dependencies[] = ctools
