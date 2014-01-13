@@ -1,0 +1,37 @@
+<?php
+function featured_migration_init(){
+
+	$query = db_select('content_field_featured', 'c');
+    $query->fields("c", array("vid","nid","field_featured_value"));
+
+    $results = $query->execute();
+	 if (count($results) > 0) {
+		foreach ($results as $value) {
+		//	print('<pre>');
+		//	print_r($value);
+		//	print('</pre>');	
+
+			$record = array();
+			$record['entity_type'] = 'node';
+			$record['bundle'] = '';
+			$record['deleted'] = '0';
+			$record['entity_id'] = $value->nid;
+			$record['revision_id'] = $value->vid;
+			$record['language'] = 'und';
+			$record['delta'] = '0';
+			if($value->field_featured_value=='false'){
+			$record['field_featured_business_li_value'] = 0;
+		}else{
+			$record['field_featured_business_li_value'] = 1;
+	}
+		
+			//drupal_write_record('field_data_field_featured_business_li', $record);
+			//drupal_write_record('field_revision_field_featured_business_li', $record);
+			//updating type
+		//	drupal_write_record('field_data_field_flip_book_type', $record);
+		//	drupal_write_record('field_revision_field_flip_book_type', $record);			
+	
+		}
+	}
+		
+}

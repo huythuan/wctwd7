@@ -1,0 +1,4 @@
+name = featured_migration
+description = migration featured business field.
+core = 7.x
+package = Custom
