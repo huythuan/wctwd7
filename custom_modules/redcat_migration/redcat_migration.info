@@ -1,0 +1,4 @@
+name = redcat_migration
+description = migration ipaper content type to scribd field.
+core = 7.x
+package = Custom

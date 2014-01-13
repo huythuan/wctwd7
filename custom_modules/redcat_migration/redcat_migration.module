@@ -1,0 +1,96 @@
+<?php
+function redcat_migration_init(){
+/* Old Version*/
+	$query = db_select('field_data_field_ipaper_issue', 'f');
+    $query->join('ipaper', 'i', 'f.entity_id = i.nid'); 
+	$query->groupBy('f.field_ipaper_issue_nid');//GROUP BY user ID
+	//Select fields
+    $query->fields("f", array("field_ipaper_issue_nid"));
+    $query->fields("i", array("fid","doc_id","access_key"));
+    $results = $query->execute();
+	 if (count($results) > 0) {
+		foreach ($results as $value) {
+			//print('<pre>');
+			//print_r(redcat_migration_get_type($value->field_ipaper_issue_nid));
+			//print('</pre>');		
+			$record = array();
+			$record['entity_type'] = 'node';
+			$record['bundle'] = 'issue';
+			$record['deleted'] = '0';
+			$record['entity_id'] = $value->field_ipaper_issue_nid;
+			$record['revision_id'] = $value->field_ipaper_issue_nid;
+			$record['language'] = 'und';
+			$record['delta'] = '0';
+			$record['field_flip_book_doc_id'] = $value->doc_id;
+			$record['field_flip_book_access_key'] = $value->access_key;
+			$record['field_flip_book_fid'] = $value->fid;
+			$record['field_flip_book_type_value'] = redcat_migration_get_type($value->field_ipaper_issue_nid);				
+			//drupal_write_record('field_data_field_flip_book', $record);
+			//drupal_write_record('field_revision_field_flip_book', $record);
+			//updating type
+			//drupal_write_record('field_data_field_flip_book_type', $record);
+			//drupal_write_record('field_revision_field_flip_book_type', $record);			
+	
+		}
+	}
+
+	/*New discover version 
+	$query = db_select('content_type_ipaper', 'c');
+	$query->condition('c.field_ipaper_type_value','NULL','!=');
+    $query->join('ipaper', 'i', 'c.nid = i.nid'); 
+	$query->groupBy('c.nid');//GROUP BY user ID
+	//Select fields
+    $query->fields("c", array("nid","field_ipaper_type_value"));
+    $query->fields("i", array("fid","doc_id","access_key"));
+    $results = $query->execute();
+	 if (count($results) > 0) {
+		foreach ($results as $value) {
+			//print('<pre>');
+			//print_r(redcat_migration_get_type($value->field_ipaper_issue_nid));
+			//print('</pre>');		
+			$record = array();
+			$record['entity_type'] = 'node';
+			$record['bundle'] = 'issue';
+			$record['deleted'] = '0';
+			$record['entity_id'] = $value->nid;
+			$record['revision_id'] = $value->nid;
+			$record['language'] = 'und';
+			$record['delta'] = '0';
+			$record['field_flip_book_doc_id'] = $value->doc_id;
+			$record['field_flip_book_access_key'] = $value->access_key;
+			$record['field_flip_book_fid'] = $value->fid;
+			$record['field_flip_book_type_value'] = $value->field_ipaper_type_value;
+			//print('<pre>');
+			//print_r($record);
+			//print('</pre>');				
+			//drupal_write_record('field_data_field_flip_book', $record);
+		    //drupal_write_record('field_revision_field_flip_book', $record);
+			//updating type
+			//drupal_write_record('field_data_field_flip_book_type', $record);
+			//drupal_write_record('field_revision_field_flip_book_type', $record);
+			// updating node type
+			$num_updated = db_update('node')
+			  ->fields(array(
+			    'type' => 'issue'
+			  ))
+			  ->condition('nid',$value->nid, '=')
+			  ->execute();
+	   }
+	}
+	*/	
+}
+function redcat_migration_get_type($id){
+	$query = db_select('content_type_ipaper', 'c')
+      ->fields('c')
+      ->condition('field_ipaper_issue_nid',$id,'=')
+      ->execute()
+      ->fetchAll();
+	$node = array();
+  	if (count($query) > 0) {
+    	foreach ($query as $value) {
+			$node = $value;	
+    	}
+  	}
+  return $node->field_ipaper_type_value;
+
+}
