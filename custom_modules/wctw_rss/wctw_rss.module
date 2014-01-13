@@ -1,0 +1,532 @@
+<?php
+/**
+ * Created by Thuan Nguyen.
+ * User: thuannguyen
+ * Date: DEC 4, 2013
+ * Time: 1:04pm
+ */
+
+/**
+ * Create RSS feed for WCTW
+ */
+/**
+ * Implements hook_menu().
+ */
+function wctw_rss_menu() {
+  	$menuitems['wineries.xml'] = array(
+	    'title' => 'RSS',
+	    'page callback' => 'wctw_rss_wineries_page_callback',
+	    'access callback' => TRUE,
+	    'type' => MENU_CALLBACK,
+  );
+	$menuitems['tasting-room.xml'] = array(
+	    'title' => 'RSS',
+	    'page callback' => 'wctw_rss_tasting_page_callback',
+	    'access callback' => TRUE,
+	    'type' => MENU_CALLBACK,
+  );
+	$menuitems['event.xml'] = array(
+	    'title' => 'XML',
+	    'page callback' => 'wctw_rss_event_page_callback',
+	    'access callback' => TRUE,
+	    'type' => MENU_CALLBACK,
+  );
+  return $menuitems;
+}
+
+/**
+ * Generates and prints RSS feed for wineries.
+ */
+function wctw_rss_wineries_page_callback() {
+	global $base_url,$language_content;	
+	$query = db_select('node', 'n');
+	$query->condition('n.type','business','=');
+	$query->condition('n.status',1,'=');
+    $query->join('field_data_taxonomy_vocabulary_5', 'f', 'n.nid = f.entity_id');
+	$query->condition('f.taxonomy_vocabulary_5_tid','29','=');
+	$query->groupBy('n.nid');//GROUP BY node ID
+	$query->orderBy('n.created','DESC');
+	//Select fields
+    $query->fields("n", array("nid", "title"));
+    $results = $query->execute();
+	$tmp = array();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			$id = $value->nid;			   
+			$title = $value->title;
+			$title = strip_tags($title);
+		    $title = preg_replace("/[^A-Z0-9a-z.,\w ]/u", '', $title);
+			$title = trim($title);
+			$url = wctw_rss_get_link($id); 			
+			$location = wctw_rss_get_location($id);
+			if(is_object($location)){
+				$phone = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->phone)));
+				$street = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->street)));
+				$city = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->city)));
+				$state = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->province)));
+				$zip = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->postal_code)));
+				$latitude = trim($location->latitude);
+				$longitude = trim($location->longitude);
+			}else{
+				$street = '';
+				$city = '';
+				$state = '';
+				$zip = '';
+				$latitude = '';
+				$longitude = '';
+			}
+			$website = wctw_rss_get_website($id);
+			if(is_object($website)){
+				$site = trim($website->field_biz_website_url);
+			}else{
+				$site = '';
+			}
+			$description = wctw_rss_get_description($id);
+			if(is_object($description)){
+				$body = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($description->body_value)));
+				$body = substr($body,0,500);
+			}else{
+				$body = '';
+			}
+			$business_hour = wctw_rss_get_hour($id);	
+			if(is_object($website)){
+				$hour = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($business_hour->field_biz_hours_text_value)));
+			}else{
+				$hour = '';
+			}
+		
+			$business_region = wctw_rss_get_region($id);
+			if(is_object($business_region)){
+				$region = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($business_region->name)));
+			}else{
+				$region = '';
+			}
+	
+			$wineriesAttribute = wctw_rss_get_attribute($id);
+
+			$featured = wctw_rss_get_featured($id);
+			$business_image = wctw_rss_get_business_image($id);
+		
+
+			
+			$xmlBody .= '
+			<item> 	    
+			    <title>' . $title . '</title>
+			    <link>' . $url . '</link>
+			    <phone>' . $phone . '</phone>
+				<street>' . $street . '</street>
+				<state>' . $state . '</state>
+				<zipcode>' . $zip . '</zipcode>
+				<latitude>' . $latitude . '</latitude>
+				<longitude>' . $longitude . '</longitude>
+				<website>' . $site . '</website>
+				<hour>' . $hour . '</hour>
+				<region>' . $region . '</region>
+				<attribute>' . $wineriesAttribute . '</attribute>
+				<featured>' . $featured . '</featured>
+				<description>' . $body . '</description>
+				<nid>' . $id . '</nid>
+				<image>' . $business_image . '</image>
+			</item>';
+			}
+		}
+	  	  	$channel= array(
+			    'version' => '2.0',
+			    'title' => t('Comments for @site_name', array('@site_name' => variable_get('site_name', 'Drupal'))),
+			    'link' => "http://winecountrythisweek.com",
+			    'description' => t('Comments'),
+			    'language' => $language_content->language,
+			    'generator' => 'http://drupal.org/',
+			  );
+		  	  $output = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n";
+			  $output .= "<rss version=\"" . $channel["version"] . "\" xml:base=\"" . "http://winecountrythisweek.com" . "\">\n";
+			  $output .= "<title>"."Tasting Room Businesses "."-RSS Feed</title>\n";
+			  $output .= "<link>"."http://www.winecountrythisweek.com/wineries.xml"."</link>\n";	
+			  $output .= "<description>Tasting Room Businesses</description>\n";
+			  $output .= "<channel>\n";
+			  $output .= $xmlBody."\n";
+			  $output .= "</channel>\n";
+			  $output .= "</rss>\n";
+
+			  drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
+			  print $output;
+	
+}
+
+/**
+ * Generates and prints RSS feed for Tasting.
+ */
+function wctw_rss_tasting_page_callback() {
+	global $base_url,$language_content;	
+	$query = db_select('node', 'n');
+	$query->condition('n.type','business','=');
+	$query->condition('n.status',1,'=');
+    $query->join('field_data_taxonomy_vocabulary_5', 'f', 'n.nid = f.entity_id');
+	$query->condition('f.taxonomy_vocabulary_5_tid','180','=');
+	$query->groupBy('n.nid');//GROUP BY node ID
+	$query->orderBy('n.created','DESC');
+	//Select fields
+    $query->fields("n", array("nid", "title"));
+    $results = $query->execute();
+	$tmp = array();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			$id = $value->nid;			   
+			$title = $value->title;
+			$title = strip_tags($title);
+		    $title = preg_replace("/[^A-Z0-9a-z.,\w ]/u", '', $title);
+			$title = trim($title);
+			$url = wctw_rss_get_link($id); 	
+			$location = wctw_rss_get_location($id);
+			if(is_object($location)){
+				$phone = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->phone)));
+				$street = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->street)));
+				$city = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->city)));
+				$state = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->province)));
+				$zip = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($location->postal_code)));
+				$latitude = trim($location->latitude);
+				$longitude = trim($location->longitude);
+			}else{
+				$street = '';
+				$city = '';
+				$state = '';
+				$zip = '';
+				$latitude = '';
+				$longitude = '';
+			}
+			$website = wctw_rss_get_website($id);
+			if(is_object($website)){
+				$site = trim($website->field_biz_website_url);
+			}else{
+				$site = '';
+			}
+			$description = wctw_rss_get_description($id);
+			if(is_object($description)){
+				$body = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($description->body_value)));
+				$body = substr($body,0,500);
+			}else{
+				$body = '';
+			}
+			$business_hour = wctw_rss_get_hour($id);	
+			if(is_object($website)){
+				$hour = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($business_hour->field_biz_hours_text_value)));
+			}else{
+				$hour = '';
+			}
+			$business_region = wctw_rss_get_region($id);
+			if(is_object($business_region)){
+				$region = trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($business_region->name)));
+			}else{
+				$region = '';
+			}
+			
+			$wineriesAttribute = wctw_rss_get_attribute($id);
+
+			$featured = wctw_rss_get_featured($id);
+			$business_image = wctw_rss_get_business_image($id);	
+			$xmlBody .= '
+			<item> 	    
+			    <title>' . $title . '</title>
+			    <link>' . $url . '</link>
+			    <phone>' . $phone . '</phone>
+				<street>' . $street . '</street>
+				<state>' . $state . '</state>
+				<zipcode>' . $zip . '</zipcode>
+				<latitude>' . $latitude . '</latitude>
+				<longitude>' . $longitude . '</longitude>
+				<website>' . $site . '</website>
+				<hour>' . $hour . '</hour>
+				<region>' . $region . '</region>
+				<attribute>' . $wineriesAttribute . '</attribute>
+				<featured>' . $featured . '</featured>
+				<description>' . $body . '</description>
+				<nid>' . $id . '</nid>
+				<image>' . $business_image . '</image>
+			</item>';
+			}
+		}
+		
+			$channel= array(
+			    'version' => '2.0',
+			    'title' => t('Comments for @site_name', array('@site_name' => variable_get('site_name', 'Drupal'))),
+			    'link' => "http://winecountrythisweek.com",
+			    'description' => t('Comments'),
+			    'language' => $language_content->language,
+			    'generator' => 'http://drupal.org/',
+			  );
+		  	  $output = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n";
+			  $output .= "<rss version=\"" . $channel["version"] . "\" xml:base=\"" . "http://winecountrythisweek.com" . "\">\n";
+			  $output .= "<title>"."Wineries Businesses "."-RSS Feed</title>\n";
+			  $output .= "<link>"."http://winecountrythisweek.com/tasting-room.xml"."</link>\n";	
+			  $output .= "<description>Wineries Businesses</description>\n";
+			  $output .= "<channel>\n";
+			  $output .= $xmlBody."\n";
+			  $output .= "</channel>\n";
+			  $output .= "</rss>\n";
+
+			  drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
+			  print $output;
+	
+}
+
+
+/**
+ * Generates and prints RSS feed for Event.
+ */
+function wctw_rss_event_page_callback() {
+	$oneYearAgo = strtotime('-1 year');
+	global $base_url,$language_content;	
+	$query = db_select('node', 'n');
+	$query->condition('n.type','calendar_event','=');
+	$query->condition('n.created',$oneYearAgo,'>');	
+	$query->condition('n.status',1,'=');
+    $query->join('field_data_field_cal_date', 'd', 'n.nid = d.entity_id');
+	$query->join('content_type_calendar_event', 't', 'n.nid = t.nid');
+	$query->join('field_data_body', 'b', 'n.nid = b.entity_id');
+	$query->groupBy('n.nid');//GROUP BY node ID
+	$query->orderBy('n.created','DESC');
+	//Select fields
+    $query->fields("n", array("nid", "title"));
+    $query->fields("d", array("field_cal_date_value", "field_cal_date_rrule"));
+	$query->fields("t", array("field_cal_cost_value", "field_cal_website_url","field_cal_hours_value"));
+	$query->fields("b", array("body_value"));
+    $results = $query->execute();
+	if (count($results) > 0) {
+		
+	  foreach ($results as $value) {	
+        	if((wctw_date_event($value->field_cal_date_value) > time()) ||   (($value->field_cal_date_rrule!='')&&(wctw_repeated_date_event($value->field_cal_date_rrule) > time())))	{
+
+			$id = $value->nid;			   
+			$title = $value->title;
+			$title = strip_tags($title);
+		    $title = preg_replace("/[^A-Z0-9a-z.,\w ]/u", '', $title);
+			$title = trim($title);
+			$url = wctw_rss_get_link($id); 
+			$website = trim(strip_tags($value->field_cal_website_url));
+			$cost = trim(strip_tags($value->field_cal_cost_value));
+			$hour = trim(strip_tags($value->field_cal_hours_value));
+			$description = substr(trim(preg_replace("/[^A-Z0-9a-z.,\w ]/u", '',strip_tags($value->body_value))),0,500);
+				
+			$xmlBody .= '
+			<item> 	    
+			    <title>' . $title . '</title>
+			    <link>' . $url . '</link>
+				<day>' . $value->field_cal_date_value . '</day>
+				<repeat>' . $value->field_cal_date_rrule . '</repeat>
+				<website>' . $website . '</website>
+				<cost>' . $cost . '</cost>
+				<hour>' . $hour . '</hour>
+				<description>' . $description . '</description>
+			</item>';
+			}
+		}
+	}
+		
+		  	  $channel= array(
+			    'version' => '2.0',
+			    'title' => t('Comments for @site_name', array('@site_name' => variable_get('site_name', 'Drupal'))),
+			    'link' => "http://winecountrythisweek.com",
+			    'description' => t('Comments'),
+			    'language' => $language_content->language,
+			    'generator' => 'http://drupal.org/',
+			  );
+		  	  $output = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n";
+			 // $output .= "<rss version=\"" . $channel["version"] . "\" xml:base=\"" . "http://winecountrythisweek.com" . "\">\n";
+	
+			  $output .= "<events>\n";
+			  $output .= $xmlBody."\n";
+			  $output .= "</events>\n";
+
+			  drupal_add_http_header('Content-Type', 'application/xml; charset=utf-8');
+			  print $output;
+
+	
+}
+/**
+*Processing date event
+*Input String date from dababase
+*return Unit Time stamp of event
+*/
+function wctw_date_event($stringDate) {
+	$date1 = explode("T",$stringDate);
+	$date2 = explode("-", $date1[0]);
+	$unitTime = mktime(0,0,0,$date2[1],$date2[2],$date2[0]);
+	return $unitTime;
+}
+/**
+*Processing repeated date event
+*Input String date from database
+*return Unit Time stamp of nearest day event
+*/
+function wctw_repeated_date_event($stringDate) {
+	$date1 = explode("=",$stringDate);
+	$date2 =  explode(";", $date1[3]);
+	//print $date2[0];
+	$y = substr($date2[0],0,4);
+	$m = substr($date2[0],4,2);
+	$d = substr($date2[0],6,2);
+	return mktime(0,0,0,$m,$d,$y);
+}
+/**
+ * Get link from nid
+ */
+
+function wctw_rss_get_link($nid) {
+	global $base_url;
+	$query = db_select('url_alias', 'u');
+	$query->condition('u.source','node/'.$nid,'=');
+	$query->fields("u", array("alias"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+				return trim($base_url.'/'.$value->alias);
+			}
+	}
+	return trim($base_url.'/node/'.$nid.'/');
+
+}
+
+/**
+ * Get location for a business
+ */
+
+function wctw_rss_get_location($nid) {
+	$query = db_select('location_instance', 'i');
+	$query->condition('i.nid',$nid,'=');
+	$query->join('location', 'l', 'l.lid = i.lid');
+	$query->join('location_phone', 'p', 'l.lid = p.lid');
+	$query->fields("l", array("street","city","province","postal_code","latitude","longitude"));
+	$query->fields("p", array("phone"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			return $value;
+		}		
+	}
+}
+/**
+ * Get location for a business website
+ */
+
+function wctw_rss_get_website($nid) {
+	$query = db_select('field_data_field_biz_website', 'w');
+	$query->condition('w.entity_id',$nid,'=');
+	$query->fields("w", array("field_biz_website_url"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			return $value;
+		}		
+	}
+}
+
+/**
+ * Get description business 
+ */
+
+function wctw_rss_get_description($nid) {
+	$query = db_select('field_data_body', 'b');
+	$query->condition('b.entity_id',$nid,'=');
+	$query->fields("b", array("body_value"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			return $value;
+		}		
+	}
+}
+/**
+ * Get business hour
+ */
+
+function wctw_rss_get_hour($nid) {
+	$query = db_select('field_data_field_biz_hours_text', 'h');
+	$query->condition('h.entity_id',$nid,'=');
+	$query->fields("h", array("field_biz_hours_text_value"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			return $value;
+		}		
+	}
+}
+/**
+ * Get business region
+ */
+
+function wctw_rss_get_region($nid) {
+	$query = db_select('field_data_taxonomy_vocabulary_4', 't');
+	$query->condition('t.entity_id',$nid,'=');
+	$query->join('taxonomy_term_data', 'd', 'd.tid = t.taxonomy_vocabulary_4_tid');
+	$query->fields("d", array("name"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			return $value;
+		}		
+	}
+}
+/**
+ * Get business wineries attribute
+ */
+
+function wctw_rss_get_attribute($nid) {
+	$listAttribute ='';
+	$query = db_select('field_data_taxonomy_vocabulary_6', 't');
+	$query->condition('t.entity_id',$nid,'=');
+	$query->join('taxonomy_term_data', 'd', 'd.tid = t.taxonomy_vocabulary_6_tid');
+	$query->groupBy('t.taxonomy_vocabulary_6_tid');
+	$query->fields("d", array("name"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			$listAttribute .= $value->name;
+			$listAttribute .= '|';
+		}	
+		return $listAttribute;	
+	}
+	return '';
+}
+/**
+ * Get business wineries featured
+ */
+
+function wctw_rss_get_featured($nid) {
+
+	$query = db_select('field_data_field_featured_business_li', 'f');
+	$query->condition('f.entity_id',$nid,'=');
+	$query->fields("f", array("field_featured_business_li_value"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			return $value->field_featured_business_li_value;
+		}		
+	}
+
+}
+/**
+ * Get business wineries logo
+ */
+
+function wctw_rss_get_business_image($nid) {
+	$url = "http://www.winecountrythisweek.com/sites/default/files/business_photo/";
+	$query = db_select('field_data_field_business_photo', 'p');
+	$query->condition('p.entity_id',$nid,'=');
+	$query->join('file_managed', 'f', 'f.fid = p.field_business_photo_fid');
+	$query->fields("f", array("uri"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+			$link = explode("/",$value->uri);
+			return $url.$link[3];
+		}		
+	}else{
+		return null;
+	}
+
+}
+
+
+
+
+

@@ -1,0 +1,4 @@
+name = WCTW RSS
+description = RSS feed for the wineries and tasting room businesses.
+core = 7.x
+package = Custom
