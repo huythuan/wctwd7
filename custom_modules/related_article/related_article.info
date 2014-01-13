@@ -1,0 +1,5 @@
+name = Related Article
+description = Help to find related articles for each business
+core = 7.x
+package = Custom
+

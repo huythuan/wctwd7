@@ -1,0 +1,110 @@
+<?php
+
+/**
+* Implement hook block
+*/
+
+function related_article_block_info() {
+  	// This example comes from node.module.
+	  $blocks['related_article'] = array(
+	    'info' => t('Related Articles for Business'),
+	    'cache' => DRUPAL_NO_CACHE,
+	  );
+	  return $blocks;
+}
+
+/**
+* Implement hook block view
+*/
+
+function related_article_block_view($delta = '') {
+	$block = array();
+	if($delta =='related_article'){	 
+	  $block['content'] = _preprocess_business();
+	}	  
+	return $block;
+}
+/*
+* Return a list of related nodes
+*/
+function _preprocess_business() {
+	// Get the nid
+	if ($node = menu_get_object()) {
+	 $nid = $node->nid;
+	//get related node from calendar
+	$query = db_select('field_data_field_cal_related','c');
+	$query->condition('c.field_cal_related_nid',$nid);
+	$query->join('node', 'n', 'n.nid = c.entity_id');
+	$query->condition('n.status','1');
+	$query->fields("n", array("nid","title","created"));
+	$query->orderBy('created', 'DESC');
+	$result_cal = $query->execute();
+	$result_cal = $result_cal->fetchAll();
+	//get related node from story
+	$query = db_select('field_data_field_story_related','s');
+	$query->condition('s.field_story_related_nid',$nid);
+	$query->join('node', 'n', 'n.nid = s.entity_id');
+	$query->condition('n.status','1');
+	$query->fields("n", array("nid","title","created"));
+	$query->orderBy('created', 'DESC');
+	$result_story = $query->execute();
+	$result_story = $result_story->fetchAll();
+	//put two above result to a list;
+	$related_list ='<div class="business_article_related">';
+	$related_list .='<h2 style="font-weight:bold">Related:</h2>';
+	$related_list .= '<ul>';
+	$empty_list = TRUE;
+	if (count($result_story) > 0) {
+		$empty_list = FALSE;
+		foreach ($result_story as $value) {			
+			$related_list .= '<li><div class="related_link_article"><a href="'._get_link($value->nid).'">'.$value->title.'</a><span class="related_date">'.date("m/d/Y", $value->created).'</span></div></li>';
+			}
+		}
+	if (count($result_cal) > 0) {	
+		$empty_list = FALSE;
+		foreach ($result_cal as $value) {
+			if(_get_date_event_end($value->nid)){	
+			$related_list .= '<li><div class="related_link_cal"><a href="'._get_link($value->nid).'">'.$value->title.'</a><span class="related_date">'.date("m/d/Y", $value->created).'</span></div></li>';
+		       }
+			}
+		}
+	$related_list .= '</ul>';
+	$related_list .= '</div>';
+	//check if empty list is true, return empty list
+	if($empty_list){
+		$related_list = '';
+	}
+	return $related_list;
+   }
+}
+function _get_link($nid) {
+	global $base_url;
+	$query = db_select('url_alias', 'u');
+	$query->condition('u.source','node/'.$nid,'=');
+	$query->fields("u", array("alias"));
+	$results = $query->execute();
+	if (count($results) > 0) {
+		foreach ($results as $value) {
+				return $base_url.'/'.$value->alias;
+			}
+	}
+	return $base_url.'/node/'.$nid.'/';
+
+}
+function _get_date_event_end($nid){
+	$query = db_select('content_field_cal_date','c');
+	$query->condition('c.nid',$nid);
+	$query->fields("c", array("field_cal_date_value"));
+	$result = $query->execute();
+	$result = $result->fetchAll();
+	if (count($result) > 0) {
+		foreach ($result as $value) {
+			if(strtotime($value->field_cal_date_value) > time()){			
+				return TRUE;			
+			   }
+			else{
+				return FALSE;
+			}
+		}
+	}
+}
